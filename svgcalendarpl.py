@@ -125,6 +125,23 @@ class SVGCalendar (inkex.Effect):
             dest="other_holidays", default="",
             help="List of dates of custom holidays special days"
                 )
+        self.OptionParser.add_option("--frame-enabled",
+            action="store", type="inkbool", 
+            dest="frame_enabled", default="False",
+            help="Insert empty frames on days"
+                )
+        self.OptionParser.add_option("--frame-color",
+            action="store", type="string", 
+            dest="frame_color", default="#808080",
+            help="Color of frame border"
+                )
+        self.OptionParser.add_option("--frame-fill",
+            action="store", type="string", 
+            dest="frame_fill", default="",
+            help="Fill of frame"
+                )
+
+
 
     def validate_options(self):
         #inkex.errormsg( self.options.input_encode )
@@ -158,7 +175,9 @@ class SVGCalendar (inkex.Effect):
         self.options.month_width  = inkex.unittouu( self.options.month_width )
         self.options.month_margin = inkex.unittouu( self.options.month_margin )
 
-        self.other_holidays = [parser.parse(d).date() for d in re.split("[ \t,]+", self.options.other_holidays)]
+        def replace_year(dt):
+            return date( int(self.options.year), dt.month, dt.day  )
+        self.other_holidays = [ replace_year(parser.parse(d).date()) for d in re.split("[ \t,]+", self.options.other_holidays)]
         
 
     # initial values:
@@ -200,24 +219,33 @@ class SVGCalendar (inkex.Effect):
           'text-align': 'center',
           'fill': self.options.color_day
           }
-        self.style_weekend = self.style_day.copy()
-        self.style_weekend['fill'] = self.options.color_weekend
+        self.style_day_name = self.style_day.copy()
+        self.style_day_name['fill'] = self.options.color_day_name
+        self.style_day_name['font-size'] = str( self.day_w / 3 )
+        self._day_offset_x = 0
+        self._day_offset_y = 0
+        if self.options.frame_enabled:
+            self.style_day['font-size'] = str( int(self.day_w / 7) )
+            self.style_day['text-align'] = "left"
+            self._day_offset_x = - int(self.day_w * 0.5 - 2*self.day_w /7 )
+            self._day_offset_y = - int( ( self.day_w / 1.5 - 2*self.day_w / 7 )  )
         self.style_nmd = self.style_day.copy()
         self.style_nmd['fill'] = self.options.color_nmd
+        self.style_weekend = self.style_day.copy()
+        self.style_weekend['fill'] = self.options.color_weekend
         self.style_month = self.style_day.copy()
         self.style_month['fill'] = self.options.color_month
         self.style_month['font-size'] = str( self.day_w / 1.5 )
         self.style_month['font-weight'] = 'bold'
         self.style_month['font-family'] = self.options.font_month
-        self.style_day_name = self.style_day.copy()
-        self.style_day_name['fill'] = self.options.color_day_name
-        self.style_day_name['font-size'] = str( self.day_w / 3 )
         self.style_year = self.style_day.copy()
         self.style_year['fill'] = self.options.color_year
         self.style_year['font-size'] = str( self.day_w * 2 )
         self.style_year['font-weight'] = 'bold'
         self.style_other_holiday = self.style_day.copy()
         self.style_other_holiday['fill'] = self.options.color_other_holiday
+
+       
 
     def is_weekend(self, pos):
         # weekend values: "sat+sun" or "sat" or "sun"
@@ -291,6 +319,21 @@ class SVGCalendar (inkex.Effect):
               exit(1)
             week_x += 1
 
+    def draw_SVG_square(self, w,h, x,y, parent, color_border, color_fill, style):
+        style = {   'stroke'        : style['fill'] if style['fill'] <> self.options.color_day else color_border ,
+                    'stroke-width'  : '1',
+                    'fill'          : color_fill,
+                }
+                    
+        attribs = {
+            'style'     : simplestyle.formatStyle(style),
+            'height'    : str(h),
+            'width'     : str(w),
+            'x'         : str(x),
+            'y'         : str(y)
+            }
+        circ = inkex.etree.SubElement(parent, inkex.addNS('rect','svg'), attribs )
+
     def create_month(self, m):
         txt_atts = {
           'transform': 'translate('+str(self.year_margin +
@@ -333,13 +376,24 @@ class SVGCalendar (inkex.Effect):
             if self.is_weekend(week_x): 
                 style = self.style_weekend
             if day == 0: style = self.style_nmd
-            if (not before) and (self.is_other_holiday(m, day_of_month)):
+            if (day <> 0) and (self.is_other_holiday(m, day_of_month)):
                 style = self.style_other_holiday
-            if (not before) and (self.is_holiday(m, day_of_month)): 
+            if (day <> 0) and (self.is_holiday(m, day_of_month)): 
                 style = self.style_weekend
             txt_atts = {'style': simplestyle.formatStyle(style),
-                        'x': str( self.day_w * week_x ),
-                        'y': str( self.day_h * (week_y+2) ) }
+                        'x': str( self.day_w * week_x + self._day_offset_x ),
+                        'y': str( self.day_h * (week_y+2) + self._day_offset_y) }
+            if (day <> 0) and (self.options.frame_enabled):
+                self.draw_SVG_square(
+                        self.day_w -2,
+                        self.day_h -2,
+                        self.day_w * week_x+1 - int(self.day_w / 2), 
+                        self.day_h * (week_y+2) + 1 -int(1.5 * self.day_h / 2), 
+                        gdays,
+                        self.options.frame_color,
+                        self.options.frame_fill,
+                        style
+                )
             if day==0 and not self.options.fill_edb:
 	      pass # draw nothing
 	    elif day==0:
@@ -372,8 +426,6 @@ class SVGCalendar (inkex.Effect):
                     'y': str( self.day_w * 1.5 ) }
         inkex.etree.SubElement(self.year_g, 'text', txt_atts).text = str(self.options.year)
         self.holidays = get_holidays(int(self.options.year))
-        inkex.debug(self.other_holidays)
-        inkex.debug(self.style_other_holiday)
         if self.options.month == 0:
           for m in range(1,13):
             self.create_month(m)

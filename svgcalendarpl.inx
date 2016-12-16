@@ -130,8 +130,13 @@
       </param>
       <_param name="encoding-help" type="description">(Select your system encoding. More information at http://docs.python.org/library/codecs.html#standard-encodings)</_param>
     </page>
-    <page name="tab" _gui-text="Urodzin">
+    <page name="tab" _gui-text="Inne okazje urodziny">
         <param name="other-holidays" type="string" _gui-text="Lista dat innych swiat lub urodzin"></param>
+    </page>
+    <page name="tab" _gui-text="Ramki">
+        <param name="frame-enabled" type="boolean" _gui-text="Opcja wlaczona">false</param>
+        <param name="frame-color" type="string" _gui-text="Kolor krawedzi ramki">#808080</param>
+        <param name="frame-fill" type="string" _gui-text="Kolor tla ramki">#c0c0c0</param>
     </page>
   </param>
   <effect>
