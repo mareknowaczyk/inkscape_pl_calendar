@@ -36,6 +36,10 @@ class SVGCalendar (inkex.Effect):
         self.OptionParser.add_option("--tab",
           action="store", type="string",
           dest="tab")
+        self.OptionParser.add_option("--year-visible",
+          action="store", type="inkbool",
+          dest="year_visible", default=True,
+          help="Pokaz rok.")
         self.OptionParser.add_option("--month",
           action="store", type="int",
           dest="month", default=0,
@@ -341,8 +345,8 @@ class SVGCalendar (inkex.Effect):
                                         self.month_x_pos) +
                                 ','+str((self.day_h * 4) +
                                        (self.month_h * self.month_y_pos))+')',
-          'id': 'month_'+str(m)+'_'+str(self.options.year) }
-        g = inkex.etree.SubElement(self.year_g, 'g', txt_atts)
+          'id': 'month_'+str(m)+'_'+str(self.options.year) }       
+        g = inkex.etree.SubElement(self.year_g, 'g', txt_atts)        
         self.write_month_header(g, m)
         gdays = inkex.etree.SubElement(g, 'g')
         cal = calendar.monthcalendar(self.options.year,m)
@@ -421,10 +425,11 @@ class SVGCalendar (inkex.Effect):
         txt_atts = {
           'id': 'year_'+str(self.options.year) }
         self.year_g = inkex.etree.SubElement(parent, 'g', txt_atts)
-        txt_atts = {'style': simplestyle.formatStyle(self.style_year),
+        if self.options.year_visible: 
+            txt_atts = {'style': simplestyle.formatStyle(self.style_year),
                     'x': str( self.doc_w / 2 ),
                     'y': str( self.day_w * 1.5 ) }
-        inkex.etree.SubElement(self.year_g, 'text', txt_atts).text = str(self.options.year)
+            inkex.etree.SubElement(self.year_g, 'text', txt_atts).text = str(self.options.year)
         self.holidays = get_holidays(int(self.options.year))
         if self.options.month == 0:
           for m in range(1,13):

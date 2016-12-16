@@ -8,7 +8,8 @@
   <dependency type="executable" location="extensions">inkex.py</dependency>
 
   <param name="tab" type="notebook">
-    <page name="tab" _gui-text="Configuration">
+  <page name="tab" _gui-text="Configuration">
+      <param name="year-visible" type="boolean" _gui-text="Pokaz rok">true</param>
       <param name="month" type="int" min="0" max="12" _gui-text="Month (0 for all)">0</param>
       <param name="year" type="int" min="0" max="3000" _gui-text="Year (0 for current)">0</param>
       <param name="fill-empty-day-boxes" type="boolean" _gui-text="Fill empty day boxes with next month's days">true</param>
