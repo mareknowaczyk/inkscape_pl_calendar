@@ -247,8 +247,9 @@ class SVGCalendar (inkex.Effect):
         if self.options.frame_enabled:
             self.style_day['font-size'] = str( int(self.day_w / 7) )
             self.style_day['text-align'] = "left"
-            self._day_offset_x = - int(self.day_w * 0.5 - 2*self.day_w /7 )
-            self._day_offset_y = - int( ( self.day_w / 1.5 - 2*self.day_w / 7 )  )
+            self.style_day['text-anchor'] = 'left'
+            self._day_offset_x = - int(self.day_w * 0.5) + 5
+            self._day_offset_y = - int( ( self.day_h * 0.5 )  )
         self.style_nmd = self.style_day.copy()
         self.style_nmd['fill'] = self.options.color_nmd
         self.style_weekend = self.style_day.copy()
@@ -294,6 +295,18 @@ class SVGCalendar (inkex.Effect):
             return dt in self.other_holidays_dates
         except:
             return False
+
+    def get_other_holidays(self, month, day):
+        try:
+            res = []
+            dt = date(int(self.options.year), month, day)            
+            if dt in self.other_holidays_dates:
+                for o in self.other_holidays:
+                    if o['date'] == dt:
+                        res.append(o)
+            return res
+        except:
+            return None
 
     def in_line_month(self, cal):
         cal2 = []
@@ -351,7 +364,13 @@ class SVGCalendar (inkex.Effect):
                 style = self.style_other_holiday
             if (day <> 0) and (self.is_holiday(month, day_of_month)): 
                 style = self.style_weekend
-            day_maker.make(self, month, week, day, style)
+            day_maker.make(self, 
+                    month, 
+                    week, 
+                    day, 
+                    style, 
+                    other_holidays=self.get_other_holidays(month, day_of_month)
+                )
             week_x += 1
             if day <> 0:
                 day_of_month +=1

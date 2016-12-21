@@ -101,7 +101,7 @@ class BasicDayMaker(object):
             week_x += 1
  
 
-    def make(self, svg_calendar, month, week, day, day_style):
+    def make(self, svg_calendar, month, week, day, day_style, **kwargs):
         """Makes single calendar day
 
         :svg_calendar: SVGCalendar object
@@ -111,10 +111,24 @@ class BasicDayMaker(object):
         :day_style: affected day style
 
         """
-        pass
-        txt_atts = {'style': simplestyle.formatStyle(day_style),
-                    'x': str( svg_calendar.day_w * self.week_x + svg_calendar._day_offset_x ),
-                    'y': str( svg_calendar.day_h * (self.week_y+2) + svg_calendar._day_offset_y) }
+        other_holidays = kwargs['other_holidays'] if 'other_holidays' in kwargs else None
+        self._off_y = 0
+        new_style = day_style.copy()
+
+        def get_txt_atts(text_align="", font_size=""):
+            if text_align:
+                new_style['text-align'] = text_align
+                new_style['text-anchor'] = text_align
+            if font_size:
+                new_style['font-size'] = font_size
+            txt_atts = {'style': simplestyle.formatStyle(new_style),
+                        'x': str( svg_calendar.day_w * self.week_x + svg_calendar._day_offset_x ),
+                        'y': str( svg_calendar.day_h * (self.week_y+2) + svg_calendar._day_offset_y+self._off_y) }
+            self._off_y += (int(font_size) if font_size else int(svg_calendar.day_w / 7) ) + 2
+            return txt_atts
+        txt_atts = get_txt_atts("left")    
+        other_holi_h = str( int(0.4 * svg_calendar.day_w / 7) )
+
 
         if (day <> 0) and (svg_calendar.options.frame_enabled):
             svg_calendar.draw_SVG_square(
@@ -125,21 +139,27 @@ class BasicDayMaker(object):
                     self.gdays,
                     svg_calendar.options.frame_color,
                     svg_calendar.options.frame_fill,
-                    day_style
+                    new_style
             )
+        day_group = inkex.etree.SubElement(self.gdays,'text', txt_atts)
         if day==0 and not svg_calendar.options.fill_edb:
           pass # draw nothing
         elif day==0:
           if self.before:
-            inkex.etree.SubElement(self.gdays, 'text', txt_atts).text = str( self.before_month[-self.bmd] )
+            inkex.etree.SubElement(day_group, 'tspan', txt_atts).text = str( self.before_month[-self.bmd] )
             self.bmd -= 1
           else:
-            inkex.etree.SubElement(self.gdays, 'text', txt_atts).text = str( self.next_month[self.bmd] )
+            inkex.etree.SubElement(day_group, 'tspan', txt_atts).text = str( self.next_month[self.bmd] )
             self.bmd += 1
         else:
-          inkex.etree.SubElement(self.gdays, 'text', txt_atts).text = str(day)
+          inkex.etree.SubElement(day_group, 'tspan', txt_atts).text = str(day)
           self.before = False
           self.day_of_month += 1
+        if svg_calendar.options.frame_enabled and other_holidays:
+            txt_atts['style']
+            for oh in other_holidays:
+                if oh['description']:
+                    inkex.etree.SubElement(day_group, 'tspan', get_txt_atts('left', other_holi_h)).text = str(oh['description'])
         self.week_x += 1
 
 
