@@ -1,0 +1,5 @@
+Kalendarz zmiany
+- dodać możliwość wydruku listy dni
+  - dla każdego dnia jeden wiersz
+  - opcja dzielenia wierszy na kilka kolumn
+- dodać możliwośc dodania opisów dla innych okazji, urodzin
