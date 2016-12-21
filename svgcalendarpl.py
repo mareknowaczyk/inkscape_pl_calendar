@@ -28,6 +28,7 @@ import inkex, simplestyle, re, calendar
 from datetime import *
 from plcalendar import get_holidays
 from dateutil import parser
+from svgcalendardays import DayMakersFactory
 
 class SVGCalendar (inkex.Effect):
 
@@ -286,43 +287,7 @@ class SVGCalendar (inkex.Effect):
             if day != 0:
               cal2.append(day)
         return cal2
-
-    def write_month_header(self, g, m):
-        txt_atts = {'style': simplestyle.formatStyle(self.style_month),
-                    'x': str( (self.month_w - self.day_w) / 2 ),
-                    'y': str( self.day_h / 5 ) }
-        try:
-          inkex.etree.SubElement(g, 'text', txt_atts).text = unicode(self.options.month_names[m-1], self.options.input_encode)
-        except:
-          inkex.errormsg('You must select your correct system encode.')
-          exit(1)
-        gw = inkex.etree.SubElement(g, 'g')
-        week_x = 0
-        if self.options.start_day=='sun':
-          for wday in self.options.day_names:
-            txt_atts = {'style': simplestyle.formatStyle(self.style_day_name),
-                        'x': str( self.day_w * week_x ),
-                        'y': str( self.day_h ) }
-            try:
-              inkex.etree.SubElement(gw, 'text', txt_atts).text = unicode(wday, self.options.input_encode)
-            except:
-              inkex.errormsg('You must select your correct system encode.')
-              exit(1)
-            week_x += 1
-        else:
-          w2 = self.options.day_names[1:]
-          w2.append(self.options.day_names[0])
-          for wday in w2:
-            txt_atts = {'style': simplestyle.formatStyle(self.style_day_name),
-                        'x': str( self.day_w * week_x ),
-                        'y': str( self.day_h ) }
-            try:
-              inkex.etree.SubElement(gw, 'text', txt_atts).text = unicode(wday, self.options.input_encode)
-            except:
-              inkex.errormsg('You must select your correct system encode.')
-              exit(1)
-            week_x += 1
-
+        
     def draw_SVG_square(self, w,h, x,y, parent, color_border, color_fill, style):
         style = {   'stroke'        : style['fill'] if style['fill'] <> self.options.color_day else color_border ,
                     'stroke-width'  : '1',
@@ -338,85 +303,48 @@ class SVGCalendar (inkex.Effect):
             }
         circ = inkex.etree.SubElement(parent, inkex.addNS('rect','svg'), attribs )
 
-    def create_month(self, m):
+    def create_month(self, month, day_maker, **kwargs):
+        """ 
+          :day_maker: object that create days
+          :kwargs: - accept following keys
+        """
+        def get_kwarg_value(key):
+          return kwargs[key] if key in kwargs else None
+            
         txt_atts = {
           'transform': 'translate('+str(self.year_margin +
                                        (self.month_w + self.month_margin) *
                                         self.month_x_pos) +
                                 ','+str((self.day_h * 4) +
                                        (self.month_h * self.month_y_pos))+')',
-          'id': 'month_'+str(m)+'_'+str(self.options.year) }       
+          'id': 'month_'+str(month)+'_'+str(self.options.year) }  
         g = inkex.etree.SubElement(self.year_g, 'g', txt_atts)        
-        self.write_month_header(g, m)
+        day_maker.write_month_header(self, g, month)
         gdays = inkex.etree.SubElement(g, 'g')
-        cal = calendar.monthcalendar(self.options.year,m)
-        if m == 1:
-          before_month = \
-            self.in_line_month( calendar.monthcalendar(self.options.year-1, 12) )
-        else:
-          before_month = \
-            self.in_line_month( calendar.monthcalendar(self.options.year, m-1) )
-        if m == 12:
-          next_month = \
-            self.in_line_month( calendar.monthcalendar(self.options.year+1, 1) )
-        else:
-          next_month = \
-            self.in_line_month( calendar.monthcalendar(self.options.year, m+1) )
-        if len(cal) < 6: # add a line after the last week
-          cal.append([0,0,0,0,0,0,0])
-        if len(cal) < 6: # add a line before the first week (Feb 2009)
-          cal.reverse()
-          cal.append([0,0,0,0,0,0,0])
-          cal.reverse()
-        # How mutch before month days will be showed:
-        bmd = cal[0].count(0) + cal[1].count(0)
-        before = True
-        week_y = 0
-        day_of_month = 1
+        cal = calendar.monthcalendar(self.options.year, month)
+        day_maker.onBeforeMonth(self, month, gdays, cal)
+        day_of_month = 1 
         for week in cal:
+          day_maker.onNewWeek(week)
           week_x = 0
           for day in week:
             style = self.style_day
             if self.is_weekend(week_x): 
                 style = self.style_weekend
             if day == 0: style = self.style_nmd
-            if (day <> 0) and (self.is_other_holiday(m, day_of_month)):
+            if (day <> 0) and (self.is_other_holiday(month, day_of_month)):
                 style = self.style_other_holiday
-            if (day <> 0) and (self.is_holiday(m, day_of_month)): 
+            if (day <> 0) and (self.is_holiday(month, day_of_month)): 
                 style = self.style_weekend
-            txt_atts = {'style': simplestyle.formatStyle(style),
-                        'x': str( self.day_w * week_x + self._day_offset_x ),
-                        'y': str( self.day_h * (week_y+2) + self._day_offset_y) }
-            if (day <> 0) and (self.options.frame_enabled):
-                self.draw_SVG_square(
-                        self.day_w -2,
-                        self.day_h -2,
-                        self.day_w * week_x+1 - int(self.day_w / 2), 
-                        self.day_h * (week_y+2) + 1 -int(1.5 * self.day_h / 2), 
-                        gdays,
-                        self.options.frame_color,
-                        self.options.frame_fill,
-                        style
-                )
-            if day==0 and not self.options.fill_edb:
-	      pass # draw nothing
-	    elif day==0:
-              if before:
-                inkex.etree.SubElement(gdays, 'text', txt_atts).text = str( before_month[-bmd] )
-                bmd -= 1
-              else:
-                inkex.etree.SubElement(gdays, 'text', txt_atts).text = str( next_month[bmd] )
-                bmd += 1
-            else:
-              inkex.etree.SubElement(gdays, 'text', txt_atts).text = str(day)
-              before = False
-              day_of_month += 1
+            day_maker.make(self, month, week, day, style)
             week_x += 1
-          week_y += 1
+            if day <> 0:
+                day_of_month +=1
         self.month_x_pos += 1
         if self.month_x_pos >= self.months_per_line:
           self.month_x_pos = 0
           self.month_y_pos += 1
+
 
     def effect(self):
         self.validate_options()
@@ -431,11 +359,12 @@ class SVGCalendar (inkex.Effect):
                     'y': str( self.day_w * 1.5 ) }
             inkex.etree.SubElement(self.year_g, 'text', txt_atts).text = str(self.options.year)
         self.holidays = get_holidays(int(self.options.year))
+        day_maker = DayMakersFactory.make(self.options)
         if self.options.month == 0:
-          for m in range(1,13):
-            self.create_month(m)
+            for m in range(1,13):
+                self.create_month(m, day_maker)
         else:
-          self.create_month(self.options.month)
+          self.create_month(self.options.month, day_maker)
 
 
 if __name__ == '__main__':   #pragma: no cover
