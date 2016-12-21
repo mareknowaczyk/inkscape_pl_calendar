@@ -182,8 +182,23 @@ class SVGCalendar (inkex.Effect):
 
         def replace_year(dt):
             return date( int(self.options.year), dt.month, dt.day  )
-        self.other_holidays = [ replace_year(parser.parse(d).date()) for d in re.split("[ \t,]+", self.options.other_holidays)]
-        
+        self.other_holidays = []
+        try:
+            for d in re.split("[;,]+", self.options.other_holidays):
+                d = d.strip()
+                parts = re.split("[ \t]+", d)
+                if parts and (parts[0]):
+                    part = {
+                        'date': replace_year(parser.parse(parts[0]).date()),
+                        'description': ''
+                    }
+                    if len(parts)>1:
+                        part['description'] = " ".join(parts[1:])
+                    self.other_holidays.append(part)
+        except Exception as e:
+            inkex.errormsg("Error in parsing holidays string. Dates should be delimited by ';'. Optional date description should be appended after date followed by <space> character. \n%s" % e)
+            exit(1)   
+        self.other_holidays_dates = [o['date'] for o in self.other_holidays]
 
     # initial values:
     month_x_pos = 0
@@ -276,7 +291,7 @@ class SVGCalendar (inkex.Effect):
     def is_other_holiday(self, month, day):
         try:
             dt = date(int(self.options.year), month, day)
-            return dt in self.other_holidays
+            return dt in self.other_holidays_dates
         except:
             return False
 
