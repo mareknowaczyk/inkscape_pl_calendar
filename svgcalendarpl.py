@@ -34,6 +34,10 @@ class SVGCalendar (inkex.Effect):
 
     def __init__(self):
         inkex.Effect.__init__(self)
+
+        def add_option(arg, type, dest, default, help):
+            self.OptionParser.add_option(arg, type=type, dest=dest, default=default, help=help)
+
         self.OptionParser.add_option("--tab",
           action="store", type="string",
           dest="tab")
@@ -145,6 +149,8 @@ class SVGCalendar (inkex.Effect):
             dest="frame_fill", default="",
             help="Fill of frame"
                 )
+        add_option('--list-calendar-enabled', "inkbool", "list_calendar_enabled", "False", "Calendar as list of days")
+        add_option('--list-calendar-columns', "int", "list_calendar_columns", 1, "List of columns if calendar as list enabled")
 
 
 

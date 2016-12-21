@@ -163,7 +163,24 @@ class BasicDayMaker(object):
         self.week_x += 1
 
 
+class ListDayMaker(BasicDayMaker):
 
+    """Single day in list day like calendar maker"""
+
+    def __init__(self, plugin_options):
+        super(ListDayMaker, self).__init__(plugin_options)
+
+    def make(self, svg_calendar, month, week, day, day_style, **kwargs):
+        super(ListDayMaker, self).make(svg_calendar, month, week, day, day_style, **kwargs)
+        self.week_x = 0
+        if day <> 0:
+            self.week_y += 1
+        
+    def onNewWeek(self, week):
+        pass
+
+
+        
 
 class DayMakersFactory(object):
 
@@ -172,4 +189,7 @@ class DayMakersFactory(object):
     @staticmethod
     def make(plugin_options):
         """Produces day maker object that depends on plugin_options"""
+        if plugin_options.list_calendar_enabled:
+            inkex.debug('in as list')
+            return ListDayMaker(plugin_options)
         return BasicDayMaker(plugin_options)

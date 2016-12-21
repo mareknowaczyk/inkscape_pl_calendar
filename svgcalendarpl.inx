@@ -136,6 +136,8 @@
     </page>
     <page name="tab" _gui-text="Ramki">
         <param name="frame-enabled" type="boolean" _gui-text="Opcja wlaczona">false</param>
+        <param name="list-calendar-enabled" type="boolean" _gui-text="Kalendarz jako lista">false</param>
+        <param name="list-calendar-columns" type="int" _gui-text="Kalendarz jako lista - liczba kolumn">1</param>
         <param name="frame-color" type="string" _gui-text="Kolor krawedzi ramki">#808080</param>
         <param name="frame-fill" type="string" _gui-text="Kolor tla ramki">#c0c0c0</param>
     </page>
