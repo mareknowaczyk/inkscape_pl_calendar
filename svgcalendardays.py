@@ -53,6 +53,7 @@ class BasicDayMaker(object):
         self.before = True
         self.week_y = -1
         self.day_of_month = 1
+        self.other_holidays_enabled = True
  
 
     def onNewWeek(self, week):
@@ -155,7 +156,7 @@ class BasicDayMaker(object):
           inkex.etree.SubElement(day_group, 'tspan', txt_atts).text = str(day)
           self.before = False
           self.day_of_month += 1
-        if svg_calendar.options.frame_enabled and other_holidays:
+        if svg_calendar.options.frame_enabled and self.other_holidays_enabled and other_holidays:
             txt_atts['style']
             for oh in other_holidays:
                 if oh['description']:
@@ -169,9 +170,51 @@ class ListDayMaker(BasicDayMaker):
 
     def __init__(self, plugin_options):
         super(ListDayMaker, self).__init__(plugin_options)
+        self.columns_count = int(plugin_options.list_calendar_columns)
+        self.columns_count = 1 if self.columns_count < 1 else self.columns_count
+
+    def onBeforeMonth(self, svg_calendar ,month, days_group, calendar):
+        """Event called before first day of month created
+
+        :svg_calendar: SVGCalendar object
+        :month: created month
+        :days_group: days group in svg tree
+        :calendar: calendar object
+
+        """
+        super(ListDayMaker, self).onBeforeMonth(svg_calendar, month, days_group, calendar)
+        old_day_w = svg_calendar.day_w
+        self.day_caption_w = svg_calendar.day_w
+        svg_calendar.day_w = self.day_caption_w
+        self.column_w = ( svg_calendar.month_w - self.day_caption_w ) / self.columns_count
+        svg_calendar.day_h = old_day_w / 2 + 4
 
     def make(self, svg_calendar, month, week, day, day_style, **kwargs):
+        old_other_holidays_enabled = self.other_holidays_enabled
+        # Temporary disabling drawing other holiday description
+        # for the day caption drawing purpose
+        self.other_holidays_enabled = False
         super(ListDayMaker, self).make(svg_calendar, month, week, day, day_style, **kwargs)
+        self.other_holidays_enabled = old_other_holidays_enabled
+        new_style = day_style.copy()
+        self.week_x = 1
+        for icol in range(self.columns_count):
+            # draw the column
+            svg_calendar.draw_SVG_square(
+                    self.column_w -2,
+                    svg_calendar.day_h -2,
+                    self.day_caption_w+1+ self.column_w* self.week_x+1 - int(self.column_w / 2), 
+                    svg_calendar.day_h * (self.week_y+2) + 1 -int(1.5 * svg_calendar.day_h / 2), 
+                    self.gdays,
+                    svg_calendar.options.frame_color,
+                    svg_calendar.options.frame_fill,
+                    new_style
+
+                    )
+            if icol == 1:
+                # draw other holidays descriptions in first column
+                pass
+
         self.week_x = 0
         if day <> 0:
             self.week_y += 1
